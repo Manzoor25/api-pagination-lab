@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="200" viewBox="0 0 760 200">
+  <title>Records accumulating in the landing zone</title>
+  <rect width="760" height="200" fill="#0d1117"/>
+  <text x="24" y="28" fill="#e6edf3" font-family="Segoe UI, sans-serif" font-size="16">Landing zone: pages hit disk as they arrive</text>
+  <rect x="520" y="50" width="200" height="110" rx="8" fill="#161b22" stroke="#7ee787"/>
+  <text x="620" y="72" text-anchor="middle" fill="#7ee787" font-family="Segoe UI, sans-serif" font-size="13">landing zone</text>
+  <g fill="#58a6ff">
+    <rect x="40" y="90" width="36" height="18" rx="3">
+      <animate attributeName="x" values="40;540;540" dur="2.4s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="1;1;0" dur="2.4s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="40" y="114" width="36" height="18" rx="3">
+      <animate attributeName="x" values="40;560;560" dur="2.4s" begin="0.4s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="1;1;0" dur="2.4s" begin="0.4s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="40" y="138" width="36" height="18" rx="3">
+      <animate attributeName="x" values="40;580;580" dur="2.4s" begin="0.8s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="1;1;0" dur="2.4s" begin="0.8s" repeatCount="indefinite"/>
+    </rect>
+  </g>
+  <rect x="545" y="88" width="150" height="14" rx="2" fill="#238636">
+    <animate attributeName="width" values="20;150;20" dur="2.4s" repeatCount="indefinite"/>
+  </rect>
+  <text x="24" y="185" fill="#8b949e" font-family="Segoe UI, sans-serif" font-size="13">Never hold the full dataset in a list. Compact the page files to Parquet at the end.</text>
+</svg>

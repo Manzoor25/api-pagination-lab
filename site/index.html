@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>How to Pull a Million Records from an API Without Losing One</title>
+  <meta name="description" content="A hands-on explanation of pagination, rate limits, and how not to lose rows.">
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card: #161b22;
+      --line: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --blue: #58a6ff;
+      --green: #3fb950;
+      --red: #f85149;
+      --amber: #d29922;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    header, main { max-width: 980px; margin: 0 auto; padding: 24px; }
+    h1 { font-size: 2rem; line-height: 1.2; margin-bottom: 8px; }
+    h2 { margin-top: 2.2rem; }
+    a { color: var(--blue); }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+      margin: 16px 0;
+    }
+    .row { display: flex; gap: 16px; flex-wrap: wrap; }
+    label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 12px; }
+    input[type="range"] { width: 100%; }
+    .stat { font-variant-numeric: tabular-nums; font-size: 1.4rem; color: var(--green); }
+    .warn { color: var(--red); font-weight: 650; }
+    .ok { color: var(--green); font-weight: 650; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+    th, td { border-bottom: 1px solid var(--line); text-align: right; padding: 8px; }
+    th:first-child, td:first-child { text-align: left; }
+    .lane { height: 18px; background: #21262d; border-radius: 9px; margin: 8px 0; position: relative; overflow: hidden; }
+    .packet {
+      position: absolute; top: 2px; width: 28px; height: 14px; border-radius: 4px;
+      background: var(--blue); animation: flow 2.4s linear infinite;
+    }
+    .packet.bounce { background: var(--red); animation: bounce 1.6s ease-in-out infinite; }
+    @keyframes flow { from { left: 0; } to { left: calc(100% - 28px); } }
+    @keyframes bounce { 0% { left: 0; } 45% { left: 42%; } 100% { left: 0; } }
+    .records { display: flex; gap: 6px; flex-wrap: wrap; min-height: 42px; }
+    .rec { padding: 6px 8px; border-radius: 6px; background: #21262d; border: 1px solid var(--line); }
+    .rec.seen { border-color: var(--green); }
+    .rec.dup { border-color: var(--amber); background: #3d2e00; }
+    .rec.miss { border-color: var(--red); background: #3d1214; }
+    .rec.window { outline: 2px solid var(--blue); }
+    button, .toggle {
+      background: #21262d; color: var(--text); border: 1px solid var(--line);
+      border-radius: 8px; padding: 8px 12px; cursor: pointer;
+    }
+    button.active { border-color: var(--blue); color: var(--blue); }
+    footer { color: var(--muted); padding-bottom: 48px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>How to Pull a Million Records from an API Without Losing One</h1>
+    <p>A page-size cap of 1,000 is not a bug. It is the API protecting itself. This page shows why a pull takes an hour, which lever actually moves that number, and which loops drop or repeat rows.</p>
+    <p><a href="https://github.com/Manzoor25/api-pagination-lab">Source code on GitHub</a></p>
+  </header>
+  <main>
+    <section class="card">
+      <h2 style="margin-top:0">Where the time goes</h2>
+      <div class="row">
+        <label>Records <output id="outRecords"></output>
+          <input id="records" type="range" min="1000" max="5000000" step="1000" value="1000000">
+        </label>
+        <label>Page size <output id="outPage"></output>
+          <input id="pageSize" type="range" min="10" max="10000" step="10" value="1000">
+        </label>
+        <label>Latency (ms) <output id="outLatency"></output>
+          <input id="latency" type="range" min="20" max="3000" step="10" value="300">
+        </label>
+        <label>Concurrency <output id="outConc"></output>
+          <input id="concurrency" type="range" min="1" max="32" step="1" value="1">
+        </label>
+        <label>Rate limit (requests / second) <output id="outRate"></output>
+          <input id="rate" type="range" min="0.2" max="50" step="0.2" value="10">
+        </label>
+      </div>
+      <p>Pages: <span class="stat" id="pages"></span></p>
+      <p>Estimated pull: <span class="stat" id="eta"></span></p>
+      <p id="bottleneck"></p>
+      <div id="lanes"></div>
+      <p class="muted" style="color:var(--muted)">Formula: time ≈ max( pages × latency / concurrency, pages / rate_limit ). Raising concurrency stops helping once the rate limit is the larger term.</p>
+    </section>
+
+    <section class="card">
+      <h2 style="margin-top:0">Offset drift versus a keyset cursor</h2>
+      <p>
+        <button id="modeOffset" class="active" type="button">Offset</button>
+        <button id="modeKeyset" type="button">Keyset / cursor</button>
+      </p>
+      <div class="records" id="drift"></div>
+      <p id="driftNote"></p>
+    </section>
+
+    <section>
+      <h2>The strategies</h2>
+      <div class="card"><strong>Naive.</strong> One call. The server returns HTTP 400, or it silently stops at the page cap. You have 1,000 rows and you think you have the table.</div>
+      <div class="card"><strong>Offset.</strong> Skip N, take a page, add the page size, repeat. Easy to write. Slow at depth, because the database walks the skipped rows. Wrong if rows are inserted, deleted, or re-sorted while you page.</div>
+      <div class="card"><strong>Cursor.</strong> The server hands you an opaque token for the next page. Consistent, and impossible to parallelize, because you cannot invent the next token.</div>
+      <div class="card"><strong>Keyset.</strong> <code>WHERE id &gt; last_id</code>. The index seeks. Depth does not matter. You can also cut the id space into ranges and run those ranges together.</div>
+      <div class="card"><strong>Parallel offset.</strong> Pages are independent, so threads help, until the rate limit starts returning 429. In this lab's demo, 20 threads against a 5 request/second cap produced 30 retries. A client limiter at 4/second produced zero.</div>
+      <div class="card"><strong>Partitioned keyset.</strong> The usual production shape. Split by id or date, seek inside each split, cap concurrency, honor the rate limit.</div>
+      <div class="card"><strong>Resilient.</strong> Retries, Retry-After, jitter, a client-side token bucket, and a checkpoint after every page. A hard kill resumes without duplicating finished pages.</div>
+      <div class="card"><strong>Incremental.</strong> Save the server clock from the start of the run. Next run asks for <code>updated_since</code>. The first load is the slow one.</div>
+      <div class="card"><strong>Bulk export.</strong> If the API will write you a file, take the file. You pay for a handful of calls, not for every page.</div>
+    </section>
+
+    <section>
+      <h2>Measured on 1,000,000 local rows</h2>
+      <p id="benchNote">Numbers load from this page's table. They were measured by <code>benchmark.py</code>, not invented.</p>
+      <div class="card" style="overflow-x:auto">
+        <table id="bench"></table>
+      </div>
+      <p id="painful"></p>
+    </section>
+  </main>
+  <footer>
+    <p>Lab repo: <a href="https://github.com/Manzoor25/api-pagination-lab">Manzoor25/api-pagination-lab</a>. The mock API is local and meant to be broken. The FDIC pull uses the public BankFind API and stays inside its published page cap.</p>
+  </footer>
+  <script>
+    window.LAB_BENCHMARK = {
+      note: "Measured locally, 1,000,000 rows, page size 1,000, latency injection off. Seconds include writing Parquet. Naive is one page on purpose.",
+      painful: "A separate 300 ms server took 0.348 s/page over 20 measured pages. Calculated, not measured: 1,000 pages would be 348 seconds. At page size 100 that same per-request cost is about 58 minutes.",
+      rows: [
+        {strategy: "naive", elapsed_s: 0.25, records_per_second: 4006.9, retries: 0, duplicates: 0, missing: 999000},
+        {strategy: "offset", elapsed_s: 91.20, records_per_second: 10964.8, retries: 0, duplicates: 0, missing: 0},
+        {strategy: "cursor", elapsed_s: 35.04, records_per_second: 28539.1, retries: 0, duplicates: 0, missing: 0},
+        {strategy: "keyset", elapsed_s: 35.27, records_per_second: 28350.6, retries: 0, duplicates: 0, missing: 0},
+        {strategy: "parallel_offset", elapsed_s: 51.37, records_per_second: 19466.4, retries: 0, duplicates: 0, missing: 0},
+        {strategy: "partitioned", elapsed_s: 57.11, records_per_second: 17510.4, retries: 0, duplicates: 0, missing: 0},
+        {strategy: "resilient", elapsed_s: 33.34, records_per_second: 29992.8, retries: 0, duplicates: 0, missing: 0},
+        {strategy: "incremental", elapsed_s: 32.56, records_per_second: 30709.2, retries: 0, duplicates: 0, missing: 0},
+        {strategy: "bulk_export", elapsed_s: 38.57, records_per_second: 25928.2, retries: 0, duplicates: 0, missing: 0}
+      ]
+    };
+  </script>
+  <script>
+    const BENCHMARK = window.LAB_BENCHMARK || {
+      note: "Benchmark table is filled after the measured run.",
+      rows: [],
+      painful: ""
+    };
+
+    const records = document.getElementById("records");
+    const pageSize = document.getElementById("pageSize");
+    const latency = document.getElementById("latency");
+    const concurrency = document.getElementById("concurrency");
+    const rate = document.getElementById("rate");
+
+    function fmt(seconds) {
+      if (seconds < 90) return seconds.toFixed(1) + " seconds";
+      if (seconds < 3600) return (seconds / 60).toFixed(1) + " minutes";
+      return (seconds / 3600).toFixed(2) + " hours";
+    }
+
+    function renderLanes(conc, limited) {
+      const host = document.getElementById("lanes");
+      host.innerHTML = "";
+      const lanes = Math.min(conc, 8);
+      for (let i = 0; i < lanes; i++) {
+        const lane = document.createElement("div");
+        lane.className = "lane";
+        const packet = document.createElement("div");
+        packet.className = "packet" + (limited ? " bounce" : "");
+        packet.style.animationDelay = (i * 0.15) + "s";
+        lane.appendChild(packet);
+        host.appendChild(lane);
+      }
+    }
+
+    function simulate() {
+      const total = Number(records.value);
+      const size = Number(pageSize.value);
+      const lat = Number(latency.value) / 1000;
+      const conc = Number(concurrency.value);
+      const rps = Number(rate.value);
+      const pages = Math.ceil(total / size);
+      const sequential = pages * lat;
+      const parallel = Math.ceil(pages / conc) * lat;
+      const rateTime = pages / rps;
+      const estimated = Math.max(parallel, rateTime);
+      const limited = rateTime >= parallel;
+      document.getElementById("outRecords").textContent = total.toLocaleString();
+      document.getElementById("outPage").textContent = size.toLocaleString();
+      document.getElementById("outLatency").textContent = latency.value;
+      document.getElementById("outConc").textContent = String(conc);
+      document.getElementById("outRate").textContent = rps.toFixed(1);
+      document.getElementById("pages").textContent = pages.toLocaleString();
+      document.getElementById("eta").textContent = fmt(estimated);
+      const note = document.getElementById("bottleneck");
+      if (limited) {
+        note.innerHTML = '<span class="warn">Bottleneck: rate limit.</span> Sequential would take ' + fmt(sequential) + '. Parallel at this concurrency would take ' + fmt(parallel) + ', but the limit needs ' + fmt(rateTime) + '. Adding threads will not beat that. It will add 429s.';
+      } else {
+        note.innerHTML = '<span class="ok">Bottleneck: round trips / latency.</span> Sequential ' + fmt(sequential) + '. This concurrency brings it to ' + fmt(parallel) + ', still under the rate-limit floor of ' + fmt(rateTime) + '.';
+      }
+      renderLanes(conc, limited);
+    }
+    [records, pageSize, latency, concurrency, rate].forEach((el) => el.addEventListener("input", simulate));
+    simulate();
+
+    let mode = "offset";
+    let tick = 0;
+    function renderDrift() {
+      const host = document.getElementById("drift");
+      host.innerHTML = "";
+      const note = document.getElementById("driftNote");
+      const phase = tick % 3;
+      let ids;
+      let klass = {};
+      if (mode === "offset") {
+        if (phase === 0) {
+          ids = [1, 2, 3, 4, 5, 6, 7, 8];
+          klass = { 1: "window", 2: "window" };
+          note.textContent = "Offset page 1 reads records 1 and 2. The window is 'skip 0, take 2'.";
+        } else if (phase === 1) {
+          ids = [5, 1, 2, 3, 4, 6, 7, 8];
+          klass = { 5: "miss", 1: "seen", 2: "seen" };
+          note.textContent = "A live update moves record 5 backward, in front of rows you already consumed. Offset does not know. It only knows 'skip 2'.";
+        } else {
+          ids = [5, 1, 2, 3, 4, 6, 7, 8];
+          klass = { 5: "miss", 2: "dup", 3: "window" };
+          note.textContent = "Page 2 skips 2 and reads 2 again (duplicate) and 3. Record 5 is now behind the window and will never be seen. Gap and duplicate, from one move.";
+        }
+      } else {
+        ids = [1, 2, 3, 4, 5, 6, 7, 8];
+        if (phase === 0) {
+          klass = { 1: "window", 2: "window" };
+          note.textContent = "Keyset page 1 reads id 1 and 2 and remembers last_id = 2. A cursor token stores that same fact opaquely.";
+        } else {
+          klass = { 1: "seen", 2: "seen", 3: "window", 4: "window" };
+          note.textContent = "Next page is id > 2. Record 5 moving around in a timestamp sort does not matter, because this walk is on id. No duplicate, no gap.";
+        }
+      }
+      ids.forEach((id) => {
+        const el = document.createElement("div");
+        el.className = "rec " + (klass[id] || "");
+        el.textContent = id;
+        host.appendChild(el);
+      });
+    }
+    setInterval(() => { tick += 1; renderDrift(); }, 1600);
+    document.getElementById("modeOffset").onclick = () => {
+      mode = "offset"; tick = 0;
+      document.getElementById("modeOffset").classList.add("active");
+      document.getElementById("modeKeyset").classList.remove("active");
+      renderDrift();
+    };
+    document.getElementById("modeKeyset").onclick = () => {
+      mode = "keyset"; tick = 0;
+      document.getElementById("modeKeyset").classList.add("active");
+      document.getElementById("modeOffset").classList.remove("active");
+      renderDrift();
+    };
+    renderDrift();
+
+    function renderBench() {
+      const table = document.getElementById("bench");
+      const rows = BENCHMARK.rows || [];
+      if (!rows.length) {
+        table.innerHTML = "<tr><td>Waiting for measured results.</td></tr>";
+        return;
+      }
+      document.getElementById("benchNote").textContent = BENCHMARK.note || "";
+      document.getElementById("painful").textContent = BENCHMARK.painful || "";
+      const head = "<tr><th>strategy</th><th>seconds</th><th>records/sec</th><th>retries</th><th>duplicates</th><th>missing</th></tr>";
+      table.innerHTML = head + rows.map((row) =>
+        `<tr><td>${row.strategy}</td><td>${row.elapsed_s}</td><td>${row.records_per_second}</td><td>${row.retries}</td><td>${row.duplicates}</td><td>${row.missing}</td></tr>`
+      ).join("");
+    }
+    renderBench();
+  </script>
+</body>
+</html>

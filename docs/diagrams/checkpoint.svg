@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="200" viewBox="0 0 760 200">
+  <title>Checkpoint resume after a crash</title>
+  <rect width="760" height="200" fill="#0d1117"/>
+  <text x="24" y="28" fill="#e6edf3" font-family="Segoe UI, sans-serif" font-size="16">Crash, then resume from the last checkpoint</text>
+  <g fill="#238636">
+    <rect x="24" y="70" width="70" height="36" rx="4"/>
+    <rect x="104" y="70" width="70" height="36" rx="4"/>
+    <rect x="184" y="70" width="70" height="36" rx="4"/>
+  </g>
+  <g fill="#6e7681">
+    <rect x="264" y="70" width="70" height="36" rx="4" opacity="0.45">
+      <animate attributeName="opacity" values="0.2;0.7;0.2" dur="1.2s" repeatCount="indefinite"/>
+    </rect>
+  </g>
+  <text x="299" y="128" text-anchor="middle" fill="#f85149" font-family="Segoe UI, sans-serif" font-size="13">killed</text>
+  <g fill="#1f6feb">
+    <rect x="400" y="70" width="70" height="36" rx="4">
+      <animate attributeName="opacity" values="0.3;1;0.3" dur="1.6s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="480" y="70" width="70" height="36" rx="4"/>
+    <rect x="560" y="70" width="70" height="36" rx="4"/>
+  </g>
+  <text x="24" y="58" fill="#8b949e" font-family="Segoe UI, sans-serif" font-size="12">pages already on disk</text>
+  <text x="400" y="58" fill="#8b949e" font-family="Segoe UI, sans-serif" font-size="12">resume, no rewrite of finished pages</text>
+  <text x="24" y="175" fill="#8b949e" font-family="Segoe UI, sans-serif" font-size="13">The checkpoint is written after every page. A hard kill does not need a clean Ctrl+C.</text>
+</svg>

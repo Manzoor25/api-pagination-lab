@@ -1,0 +1,9 @@
+# Python 3.11+. These are the only required packages for the lab itself.
+# Kafka extras live in requirements-kafka.txt and are optional.
+fastapi>=0.115.0
+uvicorn>=0.32.0
+httpx>=0.27.0
+pyarrow>=17.0.0
+matplotlib>=3.9.0
+pytest>=8.3.0
+ruff>=0.7.0

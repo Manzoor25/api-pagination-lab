@@ -1,0 +1,98 @@
+{
+  "steps": [
+    {
+      "name": "naive",
+      "records": 500,
+      "pages": 1,
+      "elapsed_s": 0.262,
+      "retries": 0,
+      "notes": "huge page rejected with HTTP 400 one allowed page returned 500 of 5,000 records. Stopping here is how a pull loses the other 99.9%."
+    },
+    {
+      "name": "offset",
+      "records": 5000,
+      "pages": 10,
+      "elapsed_s": 0.562,
+      "retries": 0,
+      "notes": ""
+    },
+    {
+      "name": "cursor",
+      "records": 5000,
+      "pages": 10,
+      "elapsed_s": 0.682,
+      "retries": 0,
+      "notes": "sequential on purpose: each cursor is minted by the previous response"
+    },
+    {
+      "name": "keyset",
+      "records": 5000,
+      "pages": 10,
+      "elapsed_s": 0.779,
+      "retries": 0,
+      "notes": "keyset seek; cost does not grow with depth"
+    },
+    {
+      "name": "parallel_offset",
+      "records": 5000,
+      "pages": 10,
+      "elapsed_s": 1.373,
+      "retries": 0,
+      "notes": "independent offsets fetched together; still subject to offset drift"
+    },
+    {
+      "name": "partitioned",
+      "records": 5000,
+      "pages": 12,
+      "elapsed_s": 1.146,
+      "retries": 0,
+      "notes": "partition_by=id; keyset inside each range"
+    },
+    {
+      "name": "bulk_export",
+      "records": 5000,
+      "pages": 10,
+      "elapsed_s": 0.987,
+      "retries": 0,
+      "notes": "server wrote one gzipped NDJSON file; client did not page"
+    }
+  ],
+  "incremental": {
+    "first_records": 5000,
+    "touched": 40,
+    "second_records": 40,
+    "second_elapsed_s": 0.251
+  },
+  "live": {
+    "offset_raw": 286,
+    "offset_unique": 272,
+    "offset_duplicates": 14,
+    "keyset_raw": 286,
+    "keyset_unique": 286,
+    "keyset_duplicates": 0,
+    "drift_events": 28
+  },
+  "resume": {
+    "killed_after_pages": 5,
+    "killed_after_id": 500,
+    "resumed_unique": 2000,
+    "resumed_raw": 2000,
+    "duplicates": 0,
+    "tail": [
+      "[resilient] page=20 records=2,000 requests=15 retries=0 elapsed=0.4s rps=40.27 eta=done after_id=1900",
+      "[resilient] finished records=2,000 pages=20 retries=0 elapsed=0.5s parquet=C:\\Users\\mamoh\\Projects\\api-pagination-lab\\data\\demo\\resume\\resilient\\kill-demo\\data.parquet",
+      "[fetch] strategy=resilient records=2,000 pages=20 retries=0 elapsed=0.5s dir=C:\\Users\\mamoh\\Projects\\api-pagination-lab\\data\\demo\\resume\\resilient\\kill-demo"
+    ]
+  },
+  "rate_limit": {
+    "server_rps": 5,
+    "rushed_concurrency": 20,
+    "rushed_retries": 30,
+    "rushed_records": 2000,
+    "polite_client_rps": 4,
+    "polite_retries": 0,
+    "polite_records": 2000
+  },
+  "offset_validation_note": "offset landed 5000 of 5000 on the quiet server",
+  "quiet_offset_ok": true
+}

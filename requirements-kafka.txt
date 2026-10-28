@@ -1,0 +1,3 @@
+# Optional. Install only if you run the Kafka/Redpanda bridge:
+#   pip install -r requirements-kafka.txt
+kafka-python>=2.0.2

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="200" viewBox="0 0 760 200">
+  <title>Requests bouncing off a rate limit</title>
+  <rect width="760" height="200" fill="#0d1117"/>
+  <text x="24" y="28" fill="#e6edf3" font-family="Segoe UI, sans-serif" font-size="16">Rate limit: extra threads bounce</text>
+  <rect x="250" y="60" width="260" height="70" rx="8" fill="#21262d" stroke="#f85149" stroke-width="2"/>
+  <text x="380" y="90" text-anchor="middle" fill="#f85149" font-family="Segoe UI, sans-serif" font-size="16">rate limit</text>
+  <text x="380" y="112" text-anchor="middle" fill="#8b949e" font-family="Segoe UI, sans-serif" font-size="12">Retry-After</text>
+  <g>
+    <circle r="9" fill="#58a6ff">
+      <animate attributeName="cx" values="40;240;40" dur="1.8s" repeatCount="indefinite"/>
+      <animate attributeName="cy" values="95;95;95" dur="1.8s" repeatCount="indefinite"/>
+    </circle>
+    <text fill="#f85149" font-family="Segoe UI, sans-serif" font-size="14" font-weight="700">
+      429
+      <animate attributeName="x" values="250;250" dur="1.8s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;0;1;0" dur="1.8s" repeatCount="indefinite"/>
+      <animate attributeName="y" values="55;55;55" dur="1.8s" repeatCount="indefinite"/>
+    </text>
+  </g>
+  <g>
+    <circle r="9" fill="#d2a8ff">
+      <animate attributeName="cx" values="40;240;40" dur="1.8s" begin="0.45s" repeatCount="indefinite"/>
+      <animate attributeName="cy" values="125;125;125" dur="1.8s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+  <text x="24" y="175" fill="#8b949e" font-family="Segoe UI, sans-serif" font-size="13">If the limit is the ceiling, concurrency does not make the pull faster. It makes more 429s.</text>
+</svg>

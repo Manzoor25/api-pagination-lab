@@ -1,0 +1,34 @@
+# Optional. Off by default. Start only if you want the streaming contrast:
+#   docker compose -f kafka_bridge/docker-compose.yml up -d
+#
+# Redpanda in KRaft mode is one process and speaks the Kafka protocol on 9092.
+# This lab does not require it for any other target.
+
+services:
+  redpanda:
+    image: redpandadata/redpanda:v24.2.11
+    command:
+      - redpanda
+      - start
+      - --overprovisioned
+      - --smp
+      - "1"
+      - --memory
+      - 512M
+      - --reserve-memory
+      - 0M
+      - --node-id
+      - "0"
+      - --kafka-addr
+      - internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr
+      - internal://redpanda:9092,external://localhost:19092
+      - --mode
+      - dev-container
+    ports:
+      - "19092:19092"
+    healthcheck:
+      test: ["CMD", "rpk", "cluster", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10

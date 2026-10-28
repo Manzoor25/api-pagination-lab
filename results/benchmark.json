@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-10-28T05:20:00Z",
+  "note": "Measured by benchmark.py. Painful projection is calculated from the 20-page sample.",
+  "sqlite_probe_ms": {
+    "offset_0": 3.2,
+    "offset_900000": 126.4,
+    "keyset_900000": 0.3
+  },
+  "painful_sample": {
+    "pages": 20,
+    "records": 20000,
+    "elapsed_s": 6.96,
+    "per_page_s": 0.348,
+    "latency_ms": 300,
+    "page_size": 1000,
+    "projected_records": 1000000,
+    "projected_pages": 1000,
+    "projected_seconds": 348.2
+  },
+  "quick": {
+    "records": 100000,
+    "rows": [
+      {"strategy": "naive", "elapsed_s": 0.29, "requests": 2, "records_per_second": 3447.5, "retries": 0, "duplicates": 0, "missing": 99000},
+      {"strategy": "offset", "elapsed_s": 3.91, "requests": 100, "records_per_second": 25551.0, "retries": 0, "duplicates": 0, "missing": 0},
+      {"strategy": "cursor", "elapsed_s": 3.30, "requests": 100, "records_per_second": 30336.1, "retries": 0, "duplicates": 0, "missing": 0},
+      {"strategy": "keyset", "elapsed_s": 3.30, "requests": 100, "records_per_second": 30309.5, "retries": 0, "duplicates": 0, "missing": 0},
+      {"strategy": "parallel_offset", "elapsed_s": 4.47, "requests": 100, "records_per_second": 22357.7, "retries": 0, "duplicates": 0, "missing": 0},
+      {"strategy": "partitioned", "elapsed_s": 5.63, "requests": 104, "records_per_second": 17776.0, "retries": 0, "duplicates": 0, "missing": 0},
+      {"strategy": "resilient", "elapsed_s": 3.80, "requests": 100, "records_per_second": 26325.4, "retries": 0, "duplicates": 0, "missing": 0},
+      {"strategy": "incremental", "elapsed_s": 4.13, "requests": 101, "records_per_second": 24217.3, "retries": 0, "duplicates": 0, "missing": 0},
+      {"strategy": "bulk_export", "elapsed_s": 4.19, "requests": 4, "records_per_second": 23841.2, "retries": 0, "duplicates": 0, "missing": 0}
+    ]
+  },
+  "full": {
+    "records": 1000000,
+    "rows": [
+      {"strategy": "naive", "elapsed_s": 0.25, "requests": 2, "records_per_second": 4006.9, "retries": 0, "duplicates": 0, "missing": 999000},
+      {"strategy": "offset", "elapsed_s": 91.20, "requests": 1000, "records_per_second": 10964.8, "retries": 0, "duplicates": 0, "missing": 0},
+      {"strategy": "cursor", "elapsed_s": 35.04, "requests": 1000, "records_per_second": 28539.1, "retries": 0, "duplicates": 0, "missing": 0},
+      {"strategy": "keyset", "elapsed_s": 35.27, "requests": 1000, "records_per_second": 28350.6, "retries": 0, "duplicates": 0, "missing": 0},
+      {"strategy": "parallel_offset", "elapsed_s": 51.37, "requests": 1000, "records_per_second": 19466.4, "retries": 0, "duplicates": 0, "missing": 0},
+      {"strategy": "partitioned", "elapsed_s": 57.11, "requests": 1000, "records_per_second": 17510.4, "retries": 0, "duplicates": 0, "missing": 0},
+      {"strategy": "resilient", "elapsed_s": 33.34, "requests": 1000, "records_per_second": 29992.8, "retries": 0, "duplicates": 0, "missing": 0},
+      {"strategy": "incremental", "elapsed_s": 32.56, "requests": 1001, "records_per_second": 30709.2, "retries": 0, "duplicates": 0, "missing": 0},
+      {"strategy": "bulk_export", "elapsed_s": 38.57, "requests": 17, "records_per_second": 25928.2, "retries": 0, "duplicates": 0, "missing": 0}
+    ]
+  }
+}
